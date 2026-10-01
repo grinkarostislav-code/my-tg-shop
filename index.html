@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Магазин</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      padding: 16px;
+      padding-bottom: 90px;
+    }
+
+    .header {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #1e1e1e;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid #2a2a2a;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .card-price {
+      font-size: 15px;
+      font-weight: 700;
+      color: #3390ec;
+      margin-bottom: 10px;
+    }
+
+    .btn-add {
+      background: #3390ec;
+      color: #ffffff;
+      border: none;
+      padding: 8px 0;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .counter {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 2px;
+    }
+
+    .counter-btn {
+      background: #3390ec;
+      color: #ffffff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .counter-num {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-section {
+      display: none;
+      background: #1e1e1e;
+      padding: 14px;
+      border-radius: 12px;
+      margin-top: 10px;
+      border: 1px solid #2a2a2a;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #121212;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">🛍️ Каталог товарів</div>
+
+  <div class="products-grid" id="products-container"></div>
+
+  <div class="form-section" id="checkout-section">
+    <div class="header" style="font-size: 16px;">📦 Дані для доставки</div>
+    
+    <div class="form-group">
+      <label>ПІБ отримувача</label>
+      <input type="text" id="name" placeholder="Іванов Іван">
+    </div>
+
+    <div class="form-group">
+      <label>Номер телефону</label>
+      <input type="tel" id="phone" placeholder="+380971234567">
+    </div>
+
+    <div class="form-group">
+      <label>Місто та № НП</label>
+      <input type="text" id="address" placeholder="м. Київ, Відділення №1">
+    </div>
+  </div>
+
+  <script>
+    const PRODUCTS = [
+      { id: 1, title: "Сканер VCDS HEX-V2", price: 1200 },
+      { id: 2, title: "Кабель VAG-COM 409.1", price: 450 },
+      { id: 3, title: "Активація функцій", price: 600 },
+      { id: 4, title: "Чип-тюнінг Stage 1", price: 2500 }
+    ];
+
+    let cart = {};
+
+    function renderProducts() {
+      const container = document.getElementById('products-container');
+      let html = '';
+
+      PRODUCTS.forEach(p => {
+        const qty = cart[p.id] || 0;
+        let actionHTML = '';
+
+        if (qty === 0) {
+          actionHTML = <button class="btn-add" onclick="updateQty(${p.id}, 1)">В кошик</button>;
+        } else {
+          actionHTML = `
+            <div class="counter">
+              <button class="counter-btn" onclick="updateQty(${p.id}, -1)">-</button>
+              <span class="counter-num">${qty}</span>
+              <button class="counter-btn" onclick="updateQty(${p.id}, 1)">+</button>
+            </div>
+          `;
+        }
+
+        html += `
+          <div class="card">
+            <div>
+              <div class="card-title">${p.title}</div>
+              <div class="card-price">${p.price} грн</div>
+            </div>
+            ${actionHTML}
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function updateQty(id, delta) {
+      const current = cart[id] || 0;
+      const next = current + delta;
+      
+      if (next <= 0) {
+        delete cart[id];
+      } else {
+        cart[id] = next;
+      }
+
+      renderProducts();
+      updateMainButton();
+    }
+
+    function updateMainButton() {
+      const tg = window.Telegram?.WebApp;
+      const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
+      const checkoutSec = document.getElementById('checkout-section');
+
+      if (totalItems > 0) {
+        checkoutSec.style.display = 'block';
+        
+        let totalPrice = 0;
+        Object.keys(cart).forEach(id => {
+          const product = PRODUCTS.find(p => p.id == id);
+          totalPrice += product.price * cart[id];
+        });
+
+        if (tg && tg.MainButton) {
+          tg.MainButton.setText(`Оформити замовлення • ${totalPrice} грн`);
+          tg.MainButton.show();
+        }
+      } else {
+        checkoutSec.style.display = 'none';
+        if (tg && tg.MainButton) {
+          tg.MainButton.hide();
+        }
+      }
+    }
+
+    // Ініціалізація Telegram WebApp
+    document.addEventListener("DOMContentLoaded", function() {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+
+        tg.MainButton.onClick(function() {
+          const name = document.getElementById('name').value.trim();
+          const phone = document.getElementById('phone').value.trim();
+          const address = document.getElementById('address').value.trim();
+
+          if (!name || !phone || !address) {
+            tg.showAlert("⚠️ Заповніть усі поля для доставки!");
+            return;
+          }
+
+          const itemsList = [];
+          Object.keys(cart).forEach(id => {
+            const product = PRODUCTS.find(p => p.id == id);
+            itemsList.push({
+              title: product.title,
+              price: product.price,
+              count: cart[id]
+            });
+          });
+
+          tg.sendData(JSON.stringify({
+            cart: itemsList,
+            customer: { name, phone, address }
+          }));
+          tg.close();
+        });
+      }
+
+      renderProducts();
+    });
+  </script>
+</body>
+</html>
