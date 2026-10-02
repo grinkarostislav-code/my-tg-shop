@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AutoParts Store & Admin</title>
+    <title>AutoParts Store</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -11,7 +11,6 @@
             --bg-color: #12131C;
             --card-bg: #1C1E2D;
             --accent-color: #E53935;
-            --accent-hover: #D32F2F;
             --text-main: #FFFFFF;
             --text-sub: #8E8E93;
             --border-color: #2C2D3C;
@@ -44,7 +43,6 @@
 
         .container { padding: 15px; }
 
-        /* CATALOG GRID */
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
         .product-card {
             background: var(--card-bg); border-radius: 12px; overflow: hidden;
@@ -61,7 +59,6 @@
             border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
 
-        /* ADMIN FORM */
         .admin-panel { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px; }
@@ -75,7 +72,6 @@
         }
         .calc-preview { background: #252836; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 0.85rem; color: #4CAF50; }
 
-        /* CART BOTTOM BAR */
         .cart-bar {
             position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg);
             padding: 15px 20px; border-top: 1px solid var(--border-color);
@@ -104,15 +100,13 @@
     </div>
 
     <div class="container">
-        <!-- CATALOG VIEW -->
         <div id="catalog-view">
             <div id="loading" style="text-align: center; padding: 40px; color: var(--text-sub);">
-                <i class="fa-solid fa-spinner fa-spin fa-2x"></i><br><br>Завантаження каталогів...
+                <i class="fa-solid fa-spinner fa-spin fa-2x"></i><br><br>Завантаження каталогу...
             </div>
             <div class="products-grid hidden" id="products-grid"></div>
         </div>
 
-        <!-- ADMIN VIEW -->
         <div id="admin-view" class="admin-panel hidden">
             <h2 style="margin-bottom: 15px; font-size: 1.1rem;"><i class="fa-solid fa-plus-circle"></i> Додати новий товар</h2>
             <form id="add-product-form" onsubmit="submitProduct(event)">
@@ -154,17 +148,16 @@
         </div>
     </div>
 
-    <!-- CART BAR -->
     <div class="cart-bar hidden" id="cart-bar">
         <div>
             <span style="font-size: 0.8rem; color: var(--text-sub);">Разом:</span>
             <div style="font-size: 1.1rem; font-weight: bold; color: #4CAF50;" id="cart-total">0 грн</div>
         </div>
-        <button class="cart-btn" onclick="checkout()">Оформити (<span id="cart-count">0</span>)</button>
-    </div>
+        <button class="cart-btn" onclick="checkout()">Оформити (<span id="cart-count">0</span>)</button></div>
 
     <script>
-        const API_URL = "https://178.128.246.254.sslip.io/api";
+        // Використовуємо відносний шлях для API
+        const API_URL = "/api";
         let products = [];
         let cart = [];
 
@@ -174,10 +167,12 @@
         async function loadProducts() {
             try {
                 const res = await fetch(`${API_URL}/products`);
+                if (!res.ok) throw new Error("HTTP error " + res.status);
                 products = await res.json();
                 renderProducts(products);
             } catch (err) {
-                document.getElementById('loading').innerHTML = '<span style="color: #E53935;"><i class="fa-solid fa-triangle-exclamation"></i> Помилка завантаження товарів. Перевірте роботу сервера.</span>';
+                console.error(err);
+                document.getElementById('loading').innerHTML = '<span style="color: #E53935;"><i class="fa-solid fa-triangle-exclamation"></i> Помилка завантаження. Перевірте зʼєднання.</span>';
             }
         }
 
@@ -186,6 +181,11 @@
             document.getElementById('loading').classList.add('hidden');
             grid.classList.remove('hidden');
             grid.innerHTML = '';
+
+            if (items.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-sub);">Товари відсутні</div>';
+                return;
+            }
 
             items.forEach(p => {
                 grid.innerHTML += `
@@ -282,7 +282,5 @@
 
         loadProducts();
     </script>
-</body>
-</html>
 </body>
 </html>
