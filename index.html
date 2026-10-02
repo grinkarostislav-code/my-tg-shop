@@ -2,265 +2,108 @@
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Магазин</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #121212;
-      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--tg-theme-bg-color, #18222d);
+      color: var(--tg-theme-text-color, #ffffff);
+      margin: 0;
       padding: 16px;
-      padding-bottom: 90px;
     }
-
-    .header {
+    h2 {
+      margin-top: 0;
       font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 16px;
     }
-
     .products-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 12px;
-      margin-bottom: 24px;
+      margin-top: 16px;
     }
-
-    .card {
-      background: #1e1e1e;
+    .product-card {
+      background: var(--tg-theme-secondary-bg-color, #213040);
       border-radius: 12px;
       padding: 12px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      border: 1px solid #2a2a2a;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
-
-    .card-title {
+    .product-title {
       font-size: 14px;
       font-weight: 600;
       margin-bottom: 8px;
     }
-
-    .card-price {
+    .product-price {
       font-size: 15px;
-      font-weight: 700;
-      color: #3390ec;
-      margin-bottom: 10px;
-    }
-
-    .btn-add {
-      background: #3390ec;
-      color: #ffffff;
-      border: none;
-      padding: 8px 0;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    .counter {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #2a2a2a;
-      border-radius: 8px;
-      padding: 2px;
-    }
-
-    .counter-btn {
-      background: #3390ec;
-      color: #ffffff;
-      border: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      font-size: 16px;
       font-weight: bold;
+      color: #64b5f6;
     }
-
-    .counter-num {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .form-section {
-      display: none;
-      background: #1e1e1e;
-      padding: 14px;
-      border-radius: 12px;
-      margin-top: 10px;
-      border: 1px solid #2a2a2a;
-    }
-
-    .form-group {
-      margin-bottom: 10px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      color: #aaa;
-      margin-bottom: 4px;
-    }
-
-    .form-group input {
-      width: 100%;
+    .error-msg {
+      color: #ff6b6b;
+      background: rgba(255, 0, 0, 0.1);
       padding: 10px;
       border-radius: 8px;
-      border: 1px solid #333;
-      background: #121212;
-      color: #fff;
+      font-size: 13px;
+    }
+    .loading {
+      color: #888;
       font-size: 14px;
-      outline: none;
     }
   </style>
 </head>
 <body>
 
-  <div class="header">🛍️ Каталог товарів</div>
-
-  <div class="products-grid" id="products-container"></div>
-
-  <div class="form-section" id="checkout-section">
-    <div class="header" style="font-size: 16px;">📦 Дані для доставки</div>
-    
-    <div class="form-group">
-      <label>ПІБ отримувача</label>
-      <input type="text" id="name" placeholder="Іванов Іван">
-    </div>
-
-    <div class="form-group">
-      <label>Номер телефону</label>
-      <input type="tel" id="phone" placeholder="+380971234567">
-    </div>
-
-    <div class="form-group">
-      <label>Місто та № НП</label>
-      <input type="text" id="address" placeholder="м. Київ, Відділення №1">
-    </div>
+  <h2>🛍 Каталог товарів</h2>
+  
+  <div id="products-container" class="products-grid">
+    <div class="loading">Завантаження товарів...</div>
   </div>
 
   <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
     const API_URL = "https://overblown-kettle-blush.ngrok-free.dev/api";
 
-    let cart = {};
-
-    function renderProducts() {
+    async function loadProducts() {
       const container = document.getElementById('products-container');
-      let html = '';
-
-      PRODUCTS.forEach(p => {
-        const qty = cart[p.id] || 0;
-        let actionHTML = '';
-
-        if (qty === 0) {
-          actionHTML = <button class="btn-add" onclick="updateQty(${p.id}, 1)">В кошик</button>;
-        } else {
-          actionHTML = `
-            <div class="counter">
-              <button class="counter-btn" onclick="updateQty(${p.id}, -1)">-</button>
-              <span class="counter-num">${qty}</span>
-              <button class="counter-btn" onclick="updateQty(${p.id}, 1)">+</button>
-            </div>
-          `;
-        }
-
-        html += `
-          <div class="card">
-            <div>
-              <div class="card-title">${p.title}</div>
-              <div class="card-price">${p.price} грн</div>
-            </div>
-            ${actionHTML}
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    function updateQty(id, delta) {
-      const current = cart[id] || 0;
-      const next = current + delta;
-      
-      if (next <= 0) {
-        delete cart[id];
-      } else {
-        cart[id] = next;
-      }
-
-      renderProducts();
-      updateMainButton();
-    }
-
-    function updateMainButton() {
-      const tg = window.Telegram?.WebApp;
-      const totalItems = Object.values(cart).reduce((a, b) => a + b, 0);
-      const checkoutSec = document.getElementById('checkout-section');
-
-      if (totalItems > 0) {
-        checkoutSec.style.display = 'block';
-        
-        let totalPrice = 0;
-        Object.keys(cart).forEach(id => {
-          const product = PRODUCTS.find(p => p.id == id);
-          totalPrice += product.price * cart[id];
-        });
-
-        if (tg && tg.MainButton) {
-          tg.MainButton.setText(`Оформити замовлення • ${totalPrice} грн`);
-          tg.MainButton.show();
-        }
-      } else {
-        checkoutSec.style.display = 'none';
-        if (tg && tg.MainButton) {
-          tg.MainButton.hide();
-        }
-      }
-    }
-
-    // Ініціалізація Telegram WebApp
-    document.addEventListener("DOMContentLoaded", function() {
-      const tg = window.Telegram?.WebApp;
-      if (tg) {
-        tg.ready();
-        tg.expand();
-
-        tg.MainButton.onClick(function() {
-          const name = document.getElementById('name').value.trim();
-          const phone = document.getElementById('phone').value.trim();
-          const address = document.getElementById('address').value.trim();
-
-          if (!name || !phone || !address) {
-            tg.showAlert("⚠️ Заповніть усі поля для доставки!");
-            return;
+      try {
+        const res = await fetch(`${API_URL}/products`, {
+          headers: {
+            "ngrok-skip-browser-warning": "true"
           }
-
-          const itemsList = [];
-          Object.keys(cart).forEach(id => {
-            const product = PRODUCTS.find(p => p.id == id);
-            itemsList.push({
-              title: product.title,
-              price: product.price,
-              count: cart[id]
-            });
-          });
-
-          tg.sendData(JSON.stringify({
-            cart: itemsList,
-            customer: { name, phone, address }
-          }));
-          tg.close();
         });
-      }
 
-      renderProducts();
+        if (!res.ok) {
+          throw new Error(`Помилка сервера: ${res.status}`);
+        }
+
+        const products = await res.json();
+
+        if (!products || products.length === 0) {
+          container.innerHTML = '<p>Товари відсутні</p>';
+          return;
+        }
+
+        container.innerHTML = products.map(p => `
+          <div class="product-card">
+            <div class="product-title">${p.title}</div>
+            <div class="product-price">${p.price} грн</div>
+          </div>
+        `).join('');
+
+      } catch (e) {
+        console.error("Помилка:", e);
+        container.innerHTML = <div class="error-msg">Помилка завантаження: ${e.message}</div>;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadProducts();
     });
   </script>
 </body>
