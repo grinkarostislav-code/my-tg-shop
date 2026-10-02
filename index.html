@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Магазин</title>
-  <script src="https://overblown-kettle-blush.ngrok-free.dev"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -147,12 +147,7 @@
   </div>
 
   <script>
-    const PRODUCTS = [
-      { id: 1, title: "Сканер VCDS HEX-V2", price: 1200 },
-      { id: 2, title: "Кабель VAG-COM 409.1", price: 450 },
-      { id: 3, title: "Активація функцій", price: 600 },
-      { id: 4, title: "Чип-тюнінг Stage 1", price: 2500 }
-    ];
+    const API_URL = "https://overblown-kettle-blush.ngrok-free.dev/api";
 
     let cart = {};
 
